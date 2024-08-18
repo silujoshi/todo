@@ -1,19 +1,13 @@
 const express= require('express')
 const app= express();
-const Pool = require('pg').Pool
+// const Pool = require('pg').Pool
+const pool = require('./db')
 const path = require('path');
 const ejs=require('ejs');
 const PORT =3000;
 require ('dotenv').config();
 
-const pool = new Pool({
-    user: process.env.USER_NAME,
-    host: process.env.HOST_NAME,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
-    dialect: process.env.DIALECT,
-    port: process.env.PORT_NUMBER
-})
+
 
 pool.connect((err,client,release)=>{
     if(err){
@@ -49,20 +43,47 @@ app.post('/filter',async(req,res)=>{
 
 
 
-
+//CREATE todo
 app.post('/addTodo',async(req,res)=>{
     const {todo,date} = req.body;
 
     try{
         const result = await pool.query(`INSERT INTO todo (todo, date) VALUES ($1,$2)
+    
             RETURNING *`,[todo, date])
             console.log(result);
-            res.redirect('/') 
+            // res.redirect('/') 
+            res.json(result.rows[0]);
 
     }
     catch(err){
         console.log('error in addding todo');
         res.status(500).json({error:'Internal Server Error'})
+    }
+})
+
+//get all todos
+app.get("/todo", async(req,res)=>{
+    try{
+        const allTodos = await pool.query("SELECT * FROM todo");
+        res.json(allTodos.rows)
+    }
+    catch(err){
+        console.log(err.message)
+    }
+})
+//get a todo
+app.get("/todo/:id", async(req,res)=>{
+    try{
+       const {id} = req.params;
+       const todo = await pool.query("SELECT * FROM todo where todo_id =$1",[id] )
+       res.json(todo.rows[0]);
+
+    }
+    catch(err){
+        console.log(err.message)
+        
+
     }
 })
 
@@ -86,7 +107,12 @@ app.post('/update/:id',async(req,res)=>{
     }
 
 })
+
+
 //DELETE
+
+
+
 app.get('/delete/:id',async(req,res)=>{
    try{ const id = req.params.id;
     await pool.query(`DELETE FROM todo WHERE id= $1`,[id])
@@ -99,3 +125,5 @@ app.get('/delete/:id',async(req,res)=>{
 app.listen(PORT,()=>{
     console.log('Server is connected')
 })
+
+
